@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # AI-Based Intrusion Detection System
 
 A beginner-friendly machine learning project for detecting suspicious network
@@ -152,3 +153,6 @@ Detection input uses the same columns except `label` is optional.
 The main model now trains from NSL-KDD instead of synthetic demo traffic. For a
 larger final project, you can also adapt the same preprocessing pattern for
 UNSW-NB15 or CIC-IDS2017.
+=======
+# ai-cyber-attack-monitor
+>>>>>>> fdb87f609e4e99a0c241d668a0b553ab77b514a9
