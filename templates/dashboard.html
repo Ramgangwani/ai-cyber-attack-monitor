@@ -1,0 +1,1178 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>IDS Dashboard</title>
+    <style>
+      :root {
+        --bg: #080d12;
+        --panel: rgba(23, 29, 36, 0.86);
+        --panel-2: rgba(32, 40, 50, 0.9);
+        --line: rgba(83, 103, 121, 0.38);
+        --text: #eef4f8;
+        --muted: #9eadba;
+        --green: #4ade80;
+        --cyan: #38bdf8;
+        --amber: #fbbf24;
+        --red: #fb7185;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        min-width: 320px;
+        font-family: Inter, Segoe UI, Arial, sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at top left, rgba(56, 189, 248, 0.11), transparent 30%),
+          radial-gradient(circle at top right, rgba(251, 113, 133, 0.10), transparent 28%),
+          var(--bg);
+      }
+
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 14px 20px;
+        border-bottom: 1px solid var(--line);
+        background: rgba(12, 18, 24, 0.92);
+        backdrop-filter: blur(14px);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .brand-mark {
+        display: grid;
+        place-items: center;
+        width: 36px;
+        height: 36px;
+        border: 1px solid #3e5362;
+        border-radius: 8px;
+        color: var(--cyan);
+      }
+
+      .brand h1 {
+        margin: 0;
+        font-size: 18px;
+      }
+
+      .brand span,
+      .muted {
+        color: var(--muted);
+      }
+
+      .header-actions,
+      .download-actions {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .status,
+      .live-monitoring,
+      .badge,
+      .download-link,
+      .logout-button {
+        display: inline-flex;
+        align-items: center;
+        min-height: 32px;
+        padding: 0 10px;
+        border-radius: 7px;
+        font-size: 12px;
+        font-weight: 800;
+        white-space: nowrap;
+      }
+
+      .status {
+        gap: 8px;
+        color: {{ "#4ade80" if model_ready else "#fb7185" }};
+        border: 1px solid var(--line);
+        background: #111820;
+      }
+
+      .live-monitoring {
+        gap: 8px;
+        color: #dcfce7;
+        border: 1px solid rgba(74, 222, 128, 0.45);
+        background: rgba(20, 83, 45, 0.42);
+        box-shadow: 0 0 18px rgba(74, 222, 128, 0.18);
+      }
+
+      .live-monitoring.critical {
+        color: #ffe4e6;
+        border-color: rgba(251, 113, 133, 0.7);
+        background: rgba(127, 29, 29, 0.62);
+        animation: criticalPulse 1s ease-in-out infinite;
+      }
+
+      .connection {
+        color: var(--cyan);
+        border-color: rgba(56, 189, 248, 0.42);
+      }
+
+      .connection.offline {
+        color: var(--red);
+        border-color: rgba(251, 113, 133, 0.54);
+      }
+
+      .connection.waiting {
+        color: var(--amber);
+        border-color: rgba(251, 191, 36, 0.45);
+      }
+
+      .logout-form { margin: 0; }
+
+      .logout-button,
+      .download-link {
+        color: var(--text);
+        border: 1px solid var(--line);
+        background: var(--panel-2);
+        text-decoration: none;
+        cursor: pointer;
+      }
+
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: currentColor;
+        box-shadow: 0 0 14px currentColor;
+      }
+
+      main {
+        display: grid;
+        gap: 12px;
+        max-width: 1360px;
+        margin: 0 auto;
+        padding: 14px;
+      }
+
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .card,
+      .panel {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        box-shadow: 0 12px 34px rgba(0, 0, 0, 0.18);
+        backdrop-filter: blur(10px);
+        transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+      }
+
+      .card {
+        padding: 10px 11px;
+        min-height: 82px;
+      }
+
+      .card.updated {
+        border-color: rgba(56, 189, 248, 0.55);
+        box-shadow: 0 0 18px rgba(56, 189, 248, 0.16);
+      }
+
+      .card.critical-card {
+        border-color: rgba(251, 113, 133, 0.75);
+        box-shadow: 0 0 24px rgba(251, 113, 133, 0.18);
+      }
+
+      .card.safe-card {
+        border-color: rgba(74, 222, 128, 0.55);
+        box-shadow: 0 0 18px rgba(74, 222, 128, 0.12);
+      }
+
+      .card.warning-card {
+        border-color: rgba(251, 191, 36, 0.62);
+        box-shadow: 0 0 18px rgba(251, 191, 36, 0.12);
+      }
+
+      .card-label {
+        margin: 0 0 7px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .card-value {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 900;
+      }
+
+      .card-foot {
+        margin: 6px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+        overflow-wrap: anywhere;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: minmax(310px, 0.78fr) minmax(460px, 1.22fr);
+        gap: 12px;
+        align-items: stretch;
+      }
+
+      .panel {
+        overflow: hidden;
+        min-width: 0;
+      }
+
+      .panel-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .panel-head h2,
+      .chart-card h3 {
+        margin: 0;
+        font-size: 14px;
+      }
+
+      .panel-body {
+        padding: 12px;
+      }
+
+      .threat-banner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 14px;
+        border: 1px solid rgba(56, 189, 248, 0.28);
+        border-radius: 8px;
+        background: rgba(12, 18, 24, 0.72);
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02);
+      }
+
+      .threat-banner strong {
+        color: var(--cyan);
+        letter-spacing: 0;
+      }
+
+      .threat-banner.critical {
+        border-color: rgba(251, 113, 133, 0.72);
+        background: rgba(63, 20, 27, 0.74);
+        animation: criticalGlow 1.2s ease-in-out infinite alternate;
+      }
+
+      .threat-banner.critical strong {
+        color: #ffe4e6;
+      }
+
+      .threat-banner.safe {
+        border-color: rgba(74, 222, 128, 0.5);
+      }
+
+      .result-strip {
+        display: grid;
+        grid-template-columns: 112px 1fr;
+        gap: 14px;
+        align-items: center;
+      }
+
+      .threat-ring {
+        --score: 0deg;
+        display: grid;
+        place-items: center;
+        width: 108px;
+        height: 108px;
+        border-radius: 50%;
+        background:
+          conic-gradient(var(--ring-color, var(--green)) var(--score), #26313b 0),
+          #111820;
+      }
+
+      .threat-ring span {
+        display: grid;
+        place-items: center;
+        width: 78px;
+        height: 78px;
+        border-radius: 50%;
+        background: var(--panel);
+        font-size: 21px;
+        font-weight: 900;
+      }
+
+      .badge {
+        color: var(--muted);
+        background: #21303b;
+      }
+
+      .badge.attack,
+      .alert-critical {
+        color: #fff1f2;
+        background: #7f1d1d;
+      }
+
+      .badge.normal,
+      .alert-low {
+        color: #dcfce7;
+        background: #14532d;
+      }
+
+      .alert-high {
+        color: #fff7ed;
+        background: #7c2d12;
+      }
+
+      .alert-elevated {
+        color: #fef9c3;
+        background: #713f12;
+      }
+
+      .live-alert {
+        margin-top: 10px;
+        padding: 10px;
+        border: 1px solid #334155;
+        border-radius: 8px;
+        color: var(--muted);
+        background: #111820;
+        font-size: 13px;
+      }
+
+      .live-alert.active {
+        border-color: var(--red);
+        color: #ffe4e6;
+        background: #3f141b;
+        animation: alertPulse 1.1s ease-in-out 2;
+      }
+
+      @keyframes alertPulse {
+        0%, 100% { box-shadow: none; }
+        50% { box-shadow: 0 0 18px rgba(251, 113, 133, 0.36); }
+      }
+
+      @keyframes criticalPulse {
+        0%, 100% { box-shadow: 0 0 14px rgba(251, 113, 133, 0.25); }
+        50% { box-shadow: 0 0 28px rgba(251, 113, 133, 0.62); }
+      }
+
+      @keyframes criticalGlow {
+        from { box-shadow: 0 0 12px rgba(251, 113, 133, 0.16); }
+        to { box-shadow: 0 0 26px rgba(251, 113, 133, 0.36); }
+      }
+
+      .chart-card {
+        min-height: 220px;
+        padding: 10px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #111820;
+      }
+
+      .chart-card h3 {
+        margin-bottom: 8px;
+        color: var(--muted);
+        font-size: 12px;
+        text-transform: uppercase;
+      }
+
+      #telemetryChart {
+        height: 180px !important;
+        max-height: 180px !important;
+        width: 100%;
+      }
+
+      .soc-details {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-top: 10px;
+      }
+
+      .detail-box {
+        padding: 10px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: rgba(17, 24, 32, 0.78);
+      }
+
+      .detail-box h3 {
+        margin: 0 0 8px;
+        color: var(--muted);
+        font-size: 12px;
+        text-transform: uppercase;
+      }
+
+      .detail-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 5px 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .detail-row strong {
+        color: var(--text);
+        text-align: right;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        padding: 9px 8px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        font-size: 13px;
+      }
+
+      th {
+        color: var(--muted);
+        font-size: 11px;
+        text-transform: uppercase;
+        position: sticky;
+        top: 0;
+        background: var(--panel);
+        z-index: 1;
+      }
+
+      .recent-attacks,
+      .security-logs {
+        height: 220px;
+        overflow-y: auto;
+      }
+
+      .row-new {
+        animation: rowFlash 1.4s ease-out;
+      }
+
+      @keyframes rowFlash {
+        from { background: rgba(56, 189, 248, 0.16); }
+        to { background: transparent; }
+      }
+
+      @media (max-width: 1050px) {
+        .metrics {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .grid,
+        .soc-details {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 620px) {
+        header {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        main {
+          padding: 12px;
+        }
+
+        .metrics,
+        .result-strip {
+          grid-template-columns: 1fr;
+        }
+
+        .card-value {
+          font-size: 18px;
+        }
+
+        th,
+        td {
+          font-size: 12px;
+          padding: 8px 6px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none">
+            <path d="M12 3L5 6v5c0 4.5 2.9 8.7 7 10 4.1-1.3 7-5.5 7-10V6l-7-3z" stroke="currentColor" stroke-width="2"/>
+            <path d="M9 12l2 2 4-5" stroke="currentColor" stroke-width="2"/>
+          </svg>
+        </div>
+        <div>
+          <h1>IDS Dashboard</h1>
+          <span>Live Android and API prediction monitoring</span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <div class="live-monitoring" id="liveMonitoring"><span class="dot"></span>LIVE MONITORING</div>
+        <div class="status connection waiting" id="connectionState"><span class="dot"></span>Waiting for Data</div>
+        <div class="status"><span class="dot"></span>{{ "Model ready" if model_ready else "Train model first" }}</div>
+        <form class="logout-form" method="post" action="/logout">
+          <button class="logout-button" type="submit">Logout</button>
+        </form>
+      </div>
+    </header>
+
+    <main>
+      <section class="threat-banner" id="latestThreatBanner">
+        <strong id="latestThreatText">LATEST THREAT DETECTED: WAITING FOR DATA</strong>
+        <span class="muted" id="latestThreatMeta">Android/API predictions will appear here automatically.</span>
+      </section>
+
+      <section class="metrics" aria-label="Security metrics">
+        <article class="card" id="totalRequestsCard">
+          <p class="card-label">Total Requests</p>
+          <p class="card-value" id="trafficScanned">0</p>
+          <p class="card-foot">API predictions received</p>
+        </article>
+        <article class="card" id="totalAttacksCard">
+          <p class="card-label">Total Attacks</p>
+          <p class="card-value" id="attackAlerts">0</p>
+          <p class="card-foot">classified as attack</p>
+        </article>
+        <article class="card" id="criticalThreatsCard">
+          <p class="card-label">Critical Threats</p>
+          <p class="card-value" id="criticalThreats">0</p>
+          <p class="card-foot">critical severity</p>
+        </article>
+        <article class="card" id="safeTrafficCard">
+          <p class="card-label">Safe Traffic</p>
+          <p class="card-value" id="safeTraffic">0</p>
+          <p class="card-foot">normal predictions</p>
+        </article>
+        <article class="card" id="currentPredictionCard">
+          <p class="card-label">Current Prediction</p>
+          <p class="card-value" id="currentPrediction">Waiting</p>
+          <p class="card-foot" id="currentPredictionMeta">No API traffic yet</p>
+        </article>
+        <article class="card" id="threatLevelCard">
+          <p class="card-label">Threat Level</p>
+          <p class="card-value" id="threatLevel">Low</p>
+          <p class="card-foot" id="threatSummary">No active alerts</p>
+        </article>
+      </section>
+
+      <section class="grid">
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Live Alert Status</h2>
+            <span class="badge" id="predictionBadge">Awaiting API traffic</span>
+          </div>
+          <div class="panel-body">
+            <div class="result-strip">
+              <div class="threat-ring" id="threatRing">
+                <span id="threatScore">0%</span>
+              </div>
+              <div>
+                <p class="muted">Latest Android/API prediction</p>
+                <h2 id="latestPrediction">No prediction yet</h2>
+                <p id="latestDetails" class="muted">Waiting for Android app traffic simulations.</p>
+                <p id="modelDetails" class="muted">Checking model connection...</p>
+                <div id="liveAlert" class="live-alert">Waiting for dashboard or Android traffic simulations.</div>
+              </div>
+            </div>
+            <div class="soc-details">
+              <div class="detail-box">
+                <h3>Android Device Monitoring</h3>
+                <div class="detail-row"><span>Mobile Status</span><strong id="mobileStatus">Waiting</strong></div>
+                <div class="detail-row"><span>Last Seen</span><strong id="mobileLastSeen">Never</strong></div>
+                <div class="detail-row"><span>Heartbeat</span><strong id="heartbeatStatus">Idle</strong></div>
+                <div class="detail-row"><span>API Connectivity</span><strong id="apiConnectivity">Checking</strong></div>
+              </div>
+              <div class="detail-box">
+                <h3>Attack Intelligence</h3>
+                <div class="detail-row"><span>Active Threat Type</span><strong id="activeThreatType">None</strong></div>
+                <div class="detail-row"><span>Severity</span><strong id="activeSeverity">Low</strong></div>
+                <div class="detail-row"><span>Detection Time</span><strong id="detectionTime">--</strong></div>
+                <div class="detail-row"><span>Threat Status</span><strong id="currentThreatStatus">Monitoring</strong></div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Live Telemetry Graph</h2>
+            <span class="badge" id="refreshState">Live polling</span>
+          </div>
+          <div class="panel-body">
+            <div class="chart-card">
+              <h3>Traffic Activity / Threat Intensity / Mobile Activity</h3>
+              <canvas id="telemetryChart" aria-label="Live telemetry graph"></canvas>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="grid">
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Recent Attacks</h2>
+            <span class="badge" id="attackTableCount">0 attacks</span>
+          </div>
+          <div class="recent-attacks">
+            <table>
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Threat</th>
+                  <th>Prob.</th>
+                  <th>Protocol</th>
+                </tr>
+              </thead>
+              <tbody id="recentAttacks">
+                <tr data-empty="true"><td colspan="4" class="muted">No attack detections yet.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Security Logs</h2>
+            <div class="download-actions">
+              <a class="download-link" href="/reports/attack-logs.csv">CSV</a>
+              <a class="download-link" href="/reports/attack-logs.pdf">PDF</a>
+              <span class="badge" id="logCount">0 events</span>
+            </div>
+          </div>
+          <div class="security-logs" id="logsContainer">
+            <table>
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Prediction</th>
+                  <th>Probability</th>
+                  <th>Threat</th>
+                  <th>Protocol</th>
+                  <th>Packets</th>
+                  <th>Bytes</th>
+                </tr>
+              </thead>
+              <tbody id="logs">
+                <tr data-empty="true"><td colspan="7" class="muted">No security events recorded yet.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+      const resultBadge = document.querySelector("#predictionBadge");
+      const refreshState = document.querySelector("#refreshState");
+      const liveMonitoring = document.querySelector("#liveMonitoring");
+      const connectionState = document.querySelector("#connectionState");
+      const latestThreatBanner = document.querySelector("#latestThreatBanner");
+      const latestThreatText = document.querySelector("#latestThreatText");
+      const latestThreatMeta = document.querySelector("#latestThreatMeta");
+      const latestPrediction = document.querySelector("#latestPrediction");
+      const latestDetails = document.querySelector("#latestDetails");
+      const currentPrediction = document.querySelector("#currentPrediction");
+      const currentPredictionMeta = document.querySelector("#currentPredictionMeta");
+      const threatRing = document.querySelector("#threatRing");
+      const threatScore = document.querySelector("#threatScore");
+      const logs = document.querySelector("#logs");
+      const logsContainer = document.querySelector("#logsContainer");
+      const recentAttacks = document.querySelector("#recentAttacks");
+      const trafficScanned = document.querySelector("#trafficScanned");
+      const attackAlerts = document.querySelector("#attackAlerts");
+      const criticalThreats = document.querySelector("#criticalThreats");
+      const safeTraffic = document.querySelector("#safeTraffic");
+      const threatLevel = document.querySelector("#threatLevel");
+      const threatSummary = document.querySelector("#threatSummary");
+      const logCount = document.querySelector("#logCount");
+      const attackTableCount = document.querySelector("#attackTableCount");
+      const telemetryCanvas = document.querySelector("#telemetryChart");
+      const modelState = document.querySelector("#modelState");
+      const modelPath = document.querySelector("#modelPath");
+      const modelDetails = document.querySelector("#modelDetails");
+      const liveAlert = document.querySelector("#liveAlert");
+      const mobileStatus = document.querySelector("#mobileStatus");
+      const mobileLastSeen = document.querySelector("#mobileLastSeen");
+      const heartbeatStatus = document.querySelector("#heartbeatStatus");
+      const apiConnectivity = document.querySelector("#apiConnectivity");
+      const activeThreatType = document.querySelector("#activeThreatType");
+      const activeSeverity = document.querySelector("#activeSeverity");
+      const detectionTime = document.querySelector("#detectionTime");
+      const currentThreatStatus = document.querySelector("#currentThreatStatus");
+      const highlightCards = [
+        document.querySelector("#totalRequestsCard"),
+        document.querySelector("#totalAttacksCard"),
+        document.querySelector("#criticalThreatsCard"),
+        document.querySelector("#safeTrafficCard"),
+        document.querySelector("#currentPredictionCard"),
+        document.querySelector("#threatLevelCard")
+      ];
+
+      const state = {
+        events: [],
+        seenIds: new Set(),
+        lastSeenLogId: 0,
+        historyLoaded: false,
+        total: 0,
+        attacks: 0,
+        normal: 0,
+        critical: 0
+      };
+
+      let telemetryChart;
+
+      async function loadModelStatus() {
+        try {
+          const response = await fetch("/api/model");
+          const data = await response.json();
+          modelState.textContent = data.ready ? "Online" : "Offline";
+          modelPath.textContent = data.model_path;
+          modelDetails.textContent = data.ready
+            ? `Connected model classes: ${(data.classes || []).join(", ") || "unknown"}`
+            : "Train the model before predictions can be processed.";
+          setConnectionState(data.ready ? "Backend Connected" : "Waiting for Data", data.ready ? "connected" : "waiting");
+          apiConnectivity.textContent = data.ready ? "Backend Connected" : "Waiting";
+        } catch (error) {
+          modelState.textContent = "Offline";
+          modelDetails.textContent = "Could not contact model status API.";
+          setConnectionState("API Offline", "offline");
+          apiConnectivity.textContent = "API Offline";
+        }
+      }
+
+      async function pollHistory() {
+        try {
+          refreshState.textContent = "Syncing";
+          const response = await fetch("/api/history?limit=60");
+          if (!response.ok) {
+            throw new Error("History API failed");
+          }
+          const data = await response.json();
+          setConnectionState("Backend Connected", "connected");
+          apiConnectivity.textContent = "Backend Connected";
+          const incoming = (data.logs || []).map(logToEvent);
+          const newEvents = incoming
+            .filter((event) => !state.seenIds.has(event.id))
+            .sort((a, b) => a.id - b.id);
+
+          if (!state.historyLoaded) {
+            state.events = incoming;
+            state.seenIds = new Set(incoming.map((event) => event.id));
+            state.lastSeenLogId = incoming.length ? incoming[0].id : 0;
+            rebuildTables();
+            if (incoming.length > 0) {
+              setActivePrediction(incoming[0], false);
+            }
+          } else if (newEvents.length > 0) {
+            newEvents.forEach(prependEvent);
+            setActivePrediction(newEvents[newEvents.length - 1], true);
+          }
+
+          state.historyLoaded = true;
+          recomputeStats();
+          updateCards();
+          updateCharts();
+          updateDeviceMonitoring();
+          updateRelativeTimes();
+          refreshState.textContent = "Live polling";
+        } catch (error) {
+          refreshState.textContent = "Sync error";
+          setConnectionState("API Offline", "offline");
+          apiConnectivity.textContent = "API Offline";
+        }
+      }
+
+      function prependEvent(event) {
+        state.events.unshift(event);
+        state.events = state.events.slice(0, 60);
+        state.seenIds.add(event.id);
+        state.lastSeenLogId = Math.max(state.lastSeenLogId, event.id);
+        insertLogRow(event, true);
+        if (event.prediction === "attack") {
+          insertAttackRow(event, true);
+        }
+      }
+
+      function rebuildTables() {
+        logs.innerHTML = "";
+        recentAttacks.innerHTML = "";
+        state.events.slice(0, 25).forEach((event) => insertLogRow(event, false));
+        state.events
+          .filter((event) => event.prediction === "attack")
+          .slice(0, 25)
+          .forEach((event) => insertAttackRow(event, false));
+        ensureEmptyRows();
+      }
+
+      function insertLogRow(event, isNew) {
+        removeEmptyRow(logs);
+        const isAtBottom =
+          logsContainer.scrollTop + logsContainer.clientHeight >=
+          logsContainer.scrollHeight - 5;
+        const row = document.createElement("tr");
+        row.dataset.logId = event.id;
+        row.dataset.timestamp = event.timestamp || "";
+        row.className = isNew ? "row-new" : "";
+        row.innerHTML = `
+          <td>${event.time}<br><span class="muted" data-relative="${event.id}">${event.relative}</span></td>
+          <td><span class="badge ${event.prediction}">${event.prediction}</span></td>
+          <td>${Math.round(event.probability * 100)}%</td>
+          <td>${event.threatLevel}</td>
+          <td>${event.protocol}</td>
+          <td>${event.packets}</td>
+          <td>${event.bytes}</td>
+        `;
+        logs.prepend(row);
+        trimRows(logs, 25);
+        if (isAtBottom) {
+          logsContainer.scrollTop = logsContainer.scrollHeight;
+        }
+      }
+
+      function insertAttackRow(event, isNew) {
+        removeEmptyRow(recentAttacks);
+        const row = document.createElement("tr");
+        row.dataset.attackId = event.id;
+        row.dataset.timestamp = event.timestamp || "";
+        row.className = isNew ? "row-new" : "";
+        row.innerHTML = `
+          <td>${event.time}<br><span class="muted" data-relative="${event.id}">${event.relative}</span></td>
+          <td>${event.threatLevel}</td>
+          <td>${Math.round(event.probability * 100)}%</td>
+          <td>${event.protocol}</td>
+        `;
+        recentAttacks.prepend(row);
+        trimRows(recentAttacks, 25);
+      }
+
+      function removeEmptyRow(tbody) {
+        const empty = tbody.querySelector("[data-empty='true']");
+        if (empty) {
+          empty.remove();
+        }
+      }
+
+      function ensureEmptyRows() {
+        if (!logs.children.length) {
+          logs.innerHTML = `<tr data-empty="true"><td colspan="7" class="muted">No security events recorded yet.</td></tr>`;
+        }
+        if (!recentAttacks.children.length) {
+          recentAttacks.innerHTML = `<tr data-empty="true"><td colspan="4" class="muted">No attack detections yet.</td></tr>`;
+        }
+      }
+
+      function trimRows(tbody, maxRows) {
+        while (tbody.children.length > maxRows) {
+          tbody.lastElementChild.remove();
+        }
+      }
+
+      function setActivePrediction(event, animate) {
+        const percent = Math.round(event.probability * 100);
+        const ringColor = percent > 70 ? "var(--red)" : percent > 35 ? "var(--amber)" : "var(--green)";
+        const predictionText = event.prediction === "attack" ? "Attack detected" : "Traffic normal";
+
+        latestPrediction.textContent = predictionText;
+        currentPrediction.textContent = event.prediction.toUpperCase();
+        currentPredictionMeta.textContent = `${event.protocol} traffic, ${event.relative}`;
+        latestDetails.textContent = `Attack probability ${percent}%. Threat level: ${event.threatLevel}.`;
+        resultBadge.textContent = event.prediction.toUpperCase();
+        resultBadge.className = `badge ${event.prediction}`;
+        threatRing.style.setProperty("--score", `${percent * 3.6}deg`);
+        threatRing.style.setProperty("--ring-color", ringColor);
+        threatScore.textContent = `${percent}%`;
+        applyThreatVisualState(event);
+        updateAttackIntelligence(event);
+
+        if (animate) {
+          liveAlert.textContent = `New Android/API prediction received: ${event.prediction.toUpperCase()} (${percent}%, ${event.threatLevel}) via ${event.protocol}.`;
+          liveAlert.classList.remove("active");
+          void liveAlert.offsetWidth;
+          liveAlert.classList.add("active");
+        }
+      }
+
+      function recomputeStats() {
+        state.total = state.events.length;
+        state.attacks = state.events.filter((event) => event.prediction === "attack").length;
+        state.normal = state.events.filter((event) => event.prediction === "normal").length;
+        state.critical = state.events.filter((event) => event.threatLevel === "critical").length;
+      }
+
+      function updateCards() {
+        const attackRate = state.total ? Math.round((state.attacks / state.total) * 100) : 0;
+        trafficScanned.textContent = state.total;
+        attackAlerts.textContent = state.attacks;
+        criticalThreats.textContent = state.critical;
+        safeTraffic.textContent = state.normal;
+        logCount.textContent = `${state.total} events`;
+        attackTableCount.textContent = `${state.attacks} attacks`;
+
+        if (attackRate >= 60) {
+          threatLevel.textContent = "Critical";
+          threatSummary.textContent = `${attackRate}% attack rate`;
+        } else if (attackRate >= 30) {
+          threatLevel.textContent = "Elevated";
+          threatSummary.textContent = `${attackRate}% attack rate`;
+        } else {
+          threatLevel.textContent = "Low";
+          threatSummary.textContent = state.total ? `${attackRate}% attack rate` : "No active alerts";
+        }
+        pulseCards();
+      }
+
+      function updateCharts() {
+        if (typeof Chart === "undefined") {
+          return;
+        }
+        updateTelemetryChart();
+      }
+
+      function updateTelemetryChart() {
+        const points = buildTelemetryPoints();
+        const labels = points.map((point) => point.label);
+
+        if (!telemetryChart) {
+          telemetryChart = createTelemetryChart(points);
+        } else {
+          telemetryChart.data.labels = labels;
+          telemetryChart.data.datasets[0].data = points.map((point) => point.requests);
+          telemetryChart.data.datasets[1].data = points.map((point) => point.threat);
+          telemetryChart.data.datasets[2].data = points.map((point) => point.mobile);
+          telemetryChart.update("none");
+        }
+      }
+
+      function createTelemetryChart(points) {
+        const existing = Chart.getChart(telemetryCanvas);
+        if (existing) {
+          existing.destroy();
+        }
+        return new Chart(telemetryCanvas, {
+          type: "line",
+          data: {
+            labels: points.map((point) => point.label),
+            datasets: [
+              {
+                label: "Requests",
+                data: points.map((point) => point.requests),
+                borderColor: "#38bdf8",
+                backgroundColor: "rgba(56, 189, 248, 0.12)",
+                fill: true,
+                tension: 0.38,
+                pointRadius: 0
+              },
+              {
+                label: "Threat Intensity",
+                data: points.map((point) => point.threat),
+                borderColor: "#fb7185",
+                backgroundColor: "rgba(251, 113, 133, 0.10)",
+                fill: true,
+                tension: 0.38,
+                pointRadius: 0
+              },
+              {
+                label: "Mobile Activity",
+                data: points.map((point) => point.mobile),
+                borderColor: "#4ade80",
+                backgroundColor: "rgba(74, 222, 128, 0.08)",
+                fill: false,
+                tension: 0.38,
+                pointRadius: 0
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 220 },
+            plugins: {
+              legend: { position: "bottom", labels: { color: "#eef4f8", boxWidth: 12 } },
+              tooltip: { mode: "index", intersect: false }
+            },
+            scales: {
+              x: { ticks: { color: "#9eadba", maxTicksLimit: 6 }, grid: { display: false } },
+              y: { beginAtZero: true, ticks: { color: "#9eadba", precision: 0 }, grid: { color: "#24303b" } }
+            }
+          }
+        });
+      }
+
+      function buildTelemetryPoints() {
+        const now = Date.now();
+        const windows = Array.from({ length: 10 }, (_, index) => {
+          const start = now - (10 - index) * 30000;
+          return { label: `${(10 - index) * 30}s`, start };
+        });
+        return windows.map((window, index) => {
+          const end = index === windows.length - 1 ? now : windows[index + 1].start;
+          const windowEvents = state.events.filter((event) =>
+            event.epoch >= window.start &&
+            event.epoch < end
+          );
+          const requests = windowEvents.length;
+          const threat = Math.round(windowEvents.reduce((max, event) =>
+            Math.max(max, event.prediction === "attack" ? event.probability * 100 : 0), 0
+          ));
+          const mobile = requests > 0 ? Math.max(8, requests * 8) : 0;
+          return { label: window.label, requests, threat, mobile };
+        });
+      }
+
+      function logToEvent(item) {
+        const timestamp = item.created_at || "";
+        const epoch = timestamp ? new Date(timestamp).getTime() : Date.now();
+        const payload = parsePayload(item.payload_json);
+        return {
+          id: Number(item.id || 0),
+          timestamp,
+          epoch: Number.isNaN(epoch) ? Date.now() : epoch,
+          time: formatLogTime(timestamp),
+          relative: relativeTime(timestamp),
+          prediction: item.prediction || "unknown",
+          probability: Number(item.attack_probability || 0),
+          threatLevel: item.threat_level || "unknown",
+          protocol: item.protocol || "n/a",
+          packets: item.packets || "n/a",
+          bytes: Number(item.src_bytes || 0) + Number(item.dst_bytes || 0),
+          payload
+        };
+      }
+
+      function parsePayload(value) {
+        if (!value) {
+          return {};
+        }
+        try {
+          return JSON.parse(value);
+        } catch (error) {
+          return {};
+        }
+      }
+
+      function formatLogTime(value) {
+        if (!value) {
+          return "";
+        }
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
+      }
+
+      function relativeTime(value) {
+        if (!value) {
+          return "just now";
+        }
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) {
+          return "just now";
+        }
+        const seconds = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000));
+        if (seconds < 60) {
+          return `${seconds}s ago`;
+        }
+        const minutes = Math.floor(seconds / 60);
+        if (minutes < 60) {
+          return `${minutes}m ago`;
+        }
+        return `${Math.floor(minutes / 60)}h ago`;
+      }
+
+      function updateRelativeTimes() {
+        state.events.forEach((event) => {
+          event.relative = relativeTime(event.timestamp);
+          document.querySelectorAll(`[data-relative="${event.id}"]`).forEach((node) => {
+            node.textContent = event.relative;
+          });
+        });
+        if (state.events.length > 0) {
+          currentPredictionMeta.textContent = `${state.events[0].protocol} traffic, ${state.events[0].relative}`;
+          mobileLastSeen.textContent = `${state.events[0].time} (${state.events[0].relative})`;
+        }
+      }
+
+      function setConnectionState(text, mode) {
+        connectionState.innerHTML = `<span class="dot"></span>${text}`;
+        connectionState.className = `status connection ${mode === "offline" ? "offline" : mode === "waiting" ? "waiting" : ""}`;
+      }
+
+      function applyThreatVisualState(event) {
+        const isCritical = event.threatLevel === "critical";
+        const isAttack = event.prediction === "attack";
+        liveMonitoring.classList.toggle("critical", isCritical);
+        latestThreatBanner.className = `threat-banner ${isCritical ? "critical" : isAttack ? "" : "safe"}`;
+        latestThreatText.textContent = isAttack
+          ? `LATEST THREAT DETECTED: ${event.threatLevel.toUpperCase()} ${event.protocol.toUpperCase()} EVENT`
+          : "LATEST THREAT DETECTED: NONE";
+        latestThreatMeta.textContent = `${event.prediction.toUpperCase()} at ${event.time} (${event.relative})`;
+
+        document.querySelector("#currentPredictionCard").className = `card ${isCritical ? "critical-card" : isAttack ? "warning-card" : "safe-card"}`;
+        document.querySelector("#threatLevelCard").className = `card ${isCritical ? "critical-card" : isAttack ? "warning-card" : "safe-card"}`;
+      }
+
+      function updateDeviceMonitoring() {
+        if (!state.events.length) {
+          mobileStatus.textContent = "Mobile Offline";
+          mobileLastSeen.textContent = "Never";
+          heartbeatStatus.textContent = "Idle";
+          return;
+        }
+        const latest = state.events[0];
+        const ageSeconds = Math.floor((Date.now() - latest.epoch) / 1000);
+        mobileStatus.textContent = ageSeconds <= 20 ? "Mobile Online" : "Mobile Offline";
+        mobileLastSeen.textContent = `${latest.time} (${latest.relative})`;
+        heartbeatStatus.textContent = ageSeconds <= 20 ? "Heartbeat Active" : "Heartbeat Stale";
+      }
+
+      function updateAttackIntelligence(event) {
+        const isAttack = event.prediction === "attack";
+        activeThreatType.textContent = isAttack ? inferThreatType(event) : "None";
+        activeSeverity.textContent = event.threatLevel;
+        detectionTime.textContent = event.time || "--";
+        currentThreatStatus.textContent = isAttack ? "Active Monitoring" : "Safe";
+      }
+
+      function inferThreatType(event) {
+        const packets = Number(event.packets || 0);
+        const payload = event.payload || {};
+        const service = String(payload.service || "").toLowerCase();
+        const failedLogins = Number(payload.num_failed_logins || 0);
+        const diffRate = Number(payload.diff_srv_rate || 0);
+        const errorRate = Math.max(
+          Number(payload.serror_rate || 0),
+          Number(payload.rerror_rate || 0)
+        );
+
+        if (packets >= 150 || errorRate >= 0.9) {
+          return "DoS-like Burst";
+        }
+        if (failedLogins >= 5 || service === "ftp" || service === "ssh") {
+          return "Repeated Login Attempts";
+        }
+        if (diffRate >= 0.5) {
+          return "Network Scan";
+        }
+        return `${event.protocol.toUpperCase()} Threat`;
+      }
+
+      function pulseCards() {
+        highlightCards.forEach((card) => {
+          card.classList.remove("updated");
+          void card.offsetWidth;
+          card.classList.add("updated");
+        });
+      }
+
+      loadModelStatus();
+      pollHistory();
+      window.setInterval(pollHistory, 6000);
+      window.setInterval(updateRelativeTimes, 1000);
+    </script>
+  </body>
+</html>

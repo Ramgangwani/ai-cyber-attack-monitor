@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+models/*.joblib
+data/*.csv
+data/*.sqlite3
+!data/.gitkeep
+.env
+android-client/.gradle/
+android-client/build/
+android-client/app/build/
+android-client/local.properties

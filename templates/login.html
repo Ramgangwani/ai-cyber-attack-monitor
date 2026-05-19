@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>IDS Login</title>
+    <style>
+      :root {
+        --bg: #101419;
+        --panel: #171d24;
+        --line: #2e3945;
+        --text: #eef4f8;
+        --muted: #9eadba;
+        --cyan: #38bdf8;
+        --red: #fb7185;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        display: grid;
+        place-items: center;
+        min-height: 100vh;
+        margin: 0;
+        padding: 24px;
+        font-family: Inter, Segoe UI, Arial, sans-serif;
+        color: var(--text);
+        background: var(--bg);
+      }
+
+      main {
+        width: 100%;
+        max-width: 420px;
+        padding: 28px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: 26px;
+      }
+
+      p {
+        margin: 0 0 24px;
+        color: var(--muted);
+      }
+
+      label {
+        display: block;
+        margin: 16px 0 8px;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      input {
+        width: 100%;
+        min-height: 44px;
+        padding: 0 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        color: var(--text);
+        background: #0d1117;
+        font-size: 15px;
+      }
+
+      button {
+        width: 100%;
+        min-height: 44px;
+        margin-top: 22px;
+        border: 0;
+        border-radius: 8px;
+        color: #071016;
+        background: var(--cyan);
+        cursor: pointer;
+        font-weight: 800;
+      }
+
+      .error {
+        margin: 0 0 16px;
+        padding: 10px 12px;
+        border: 1px solid #7f1d1d;
+        border-radius: 8px;
+        color: #ffe4e6;
+        background: #3f141b;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>IDS Login</h1>
+      <p>Sign in to access the intrusion detection dashboard.</p>
+      {% if error %}
+        <div class="error">{{ error }}</div>
+      {% endif %}
+      <form method="post">
+        <label for="username">Username</label>
+        <input id="username" name="username" autocomplete="username" required>
+
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required>
+
+        <button type="submit">Sign In</button>
+      </form>
+    </main>
+  </body>
+</html>
